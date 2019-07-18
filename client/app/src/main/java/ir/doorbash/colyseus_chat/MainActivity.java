@@ -58,11 +58,6 @@ public class MainActivity extends AppCompatActivity {
                     data.put("op", "message");
                     data.put("message", input.toString());
                     room.send(data);
-
-                    data = new LinkedHashMap<>();
-                    data.put("op", "typing");
-                    data.put("status", false);
-                    room.send(data);
                 }
                 return true;
             }

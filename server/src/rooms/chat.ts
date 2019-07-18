@@ -68,6 +68,8 @@ export class ChatRoom extends Room {
         this.state.messages.push(message);
 
         delete this.state.users[client.id];
+
+        this.broadcast({op: "typing", status: false, sender: client.id});
     }
 
     onMessage(client, data) {
@@ -78,6 +80,8 @@ export class ChatRoom extends Room {
             message.text = data.message;
             message.user = this.state.users[client.id];
             this.state.messages.push(message);
+
+            this.broadcast({op: "typing", status: false, sender: client.id});
         } else if (data.op == "typing") {
             data.sender = client.id;
             this.broadcast(data);
