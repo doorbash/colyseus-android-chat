@@ -23,11 +23,13 @@ public class Message extends Schema implements IMessage {
     @SchemaField("1/string")
     public String text = "";
 
-    @SchemaField("2/ref")
-    public User user = new User();
+    @SchemaField("2/string")
+    public String sender = "";
 
     @SchemaField("3/int64")
     public long time = 0;
+
+    public User senderUser;
 
     @Override
     public String getId() {
@@ -41,12 +43,21 @@ public class Message extends Schema implements IMessage {
 
     @Override
     public IUser getUser() {
+        if (senderUser != null)
+            return senderUser;
+        User user = new User();
+        user.id = sender;
         return user;
     }
 
     @Override
     public Date getCreatedAt() {
         return new Date(time);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return (obj instanceof User && ((User) obj).id.equals(id));
     }
 }
 

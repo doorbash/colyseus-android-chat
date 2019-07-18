@@ -20,6 +20,9 @@ public class User extends Schema implements IUser {
 	@SchemaField("1/string")
 	public String name = "";
 
+	@SchemaField("2/boolean")
+	public boolean is_typing = false;
+
 	@Override
 	public String getId() {
 		return id;

@@ -39,7 +39,6 @@ public class MainActivity extends AppCompatActivity {
     Client client;
     Room<MyState> room;
     MessagesListAdapter<Message> adapter;
-    List<String> typingUsers = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -126,46 +125,33 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     protected void onMessage(Object message) {
-                        LinkedHashMap<String, Object> data = (LinkedHashMap<String, Object>) message;
-                        if (data.get("op").equals("typing")) {
-                            String sender = (String) data.get("sender");
-                            if (sender.equals(clientId)) return;
-                            if ((boolean) data.get("status")) {
-                                if (typingUsers.contains(sender)) return;
-                                typingUsers.add(sender);
-                            } else {
-                                typingUsers.remove(sender);
-                            }
-                        }
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                updateTypingUI();
-                            }
-                        });
+                        System.out.println(message);
                     }
 
                     @Override
                     protected void onJoin() {
                         System.out.println("joined chat");
+                        room.getState().users.onAddListener = new Schema.MapSchema.onAddListener<User>() {
+                            @Override
+                            public void onAdd(User user, String key) {
+                                user.onChange = new Schema.onChange() {
+                                    @Override
+                                    public void onChange(List<DataChange> changes) {
+                                        for (DataChange change : changes) {
+                                            if (change.field.equals("is_typing")) updateTypingUI();
+                                        }
+                                    }
+                                };
+                            }
+                        };
                         room.getState().messages.onAddListener = new Schema.ArraySchema.onAddListener<Message>() {
                             @Override
                             public void onAdd(final Message message, int key) {
+                                message.senderUser = room.getState().users.get(message.sender);
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
                                         adapter.addToStart(message, true);
-                                    }
-                                });
-                            }
-                        };
-                        room.getState().messages.onRemoveListener = new Schema.ArraySchema.onRemoveListener<Message>() {
-                            @Override
-                            public void onRemove(final Message message, int key) {
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        adapter.delete(message);
                                     }
                                 });
                             }
@@ -191,6 +177,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateTypingUI() {
+        Collection<User> users = room.getState().users.values();
+        Iterator<User> it = users.iterator();
+        List<String> typingUsers = new ArrayList<>();
+        while(it.hasNext()) {
+            User user = it.next();
+            if(!user.id.equals(clientId) && user.is_typing) {
+                typingUsers.add(user.name);
+            }
+        }
         if (typingUsers.isEmpty()) {
             typing.setText("");
             return;

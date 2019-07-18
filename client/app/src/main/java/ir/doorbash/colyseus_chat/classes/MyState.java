@@ -12,10 +12,10 @@ import io.colyseus.serializer.schema.annotations.SchemaField;
 
 @SchemaClass
 public class MyState extends Schema {
-	@SchemaField("0/array/ref")
-	public ArraySchema<Message> messages = new ArraySchema<>(Message.class);
-
-	@SchemaField("1/map/ref")
+	@SchemaField("0/map/ref")
 	public MapSchema<User> users = new MapSchema<>(User.class);
+
+	@SchemaField("1/array/ref")
+	public ArraySchema<Message> messages = new ArraySchema<>(Message.class);
 }
 

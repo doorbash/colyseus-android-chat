@@ -8,6 +8,9 @@ class User extends Schema {
 
     @type("string")
     name = "";
+
+    @type("boolean")
+    is_typing = false;
 }
 
 class Message extends Schema {
@@ -17,19 +20,19 @@ class Message extends Schema {
     @type("string")
     text: string;
 
-    @type(User)
-    user: User;
+    @type("string")
+    sender: string;
 
     @type("int64")
     time: number = Date.now();
 }
 
 class MyState extends Schema {
-    @type([Message])
-    messages = new ArraySchema<Message>();
-
     @type({ map: User })
     users = new MapSchema<User>();
+    
+    @type([Message])
+    messages = new ArraySchema<Message>();
 }
 
 export class ChatRoom extends Room {
@@ -53,7 +56,7 @@ export class ChatRoom extends Room {
 
         var message: Message = new Message();
         message.text = user.name + " joined.";
-        message.user = this.state.users["server"];
+        message.sender = "server"
         this.state.messages.push(message);
     }
 
@@ -64,12 +67,10 @@ export class ChatRoom extends Room {
 
         var message: Message = new Message();
         message.text = user.name + " left.";
-        message.user = this.state.users["server"];
+        message.sender = "server"
         this.state.messages.push(message);
 
         delete this.state.users[client.id];
-
-        this.broadcast({op: "typing", status: false, sender: client.id});
     }
 
     onMessage(client, data) {
@@ -78,13 +79,12 @@ export class ChatRoom extends Room {
         if (data.op == "message") {
             var message: Message = new Message();
             message.text = data.message;
-            message.user = this.state.users[client.id];
+            message.sender = this.state.users[client.id].name;
             this.state.messages.push(message);
 
-            this.broadcast({op: "typing", status: false, sender: client.id});
+            this.state.users[client.id].is_typing = false;
         } else if (data.op == "typing") {
-            data.sender = client.id;
-            this.broadcast(data);
+            this.state.users[client.id].is_typing = data.status;
         }
     }
 
