@@ -27,7 +27,7 @@ import ir.doorbash.colyseus_chat.classes.User;
 public class MainActivity extends AppCompatActivity {
 
     // Constants
-    public static final String ENDPOINT = "ws://192.168.1.134:3333";
+    public static final String ENDPOINT = "ws://192.168.1.101:3333";
 
     // Views
     MessagesList messagesList;
@@ -131,7 +131,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     protected void onJoin() {
                         System.out.println("joined chat");
-                        room.getState().users.onAddListener = new Schema.MapSchema.onAddListener<User>() {
+                        room.state.users.onAdd = new Schema.MapSchema.onAddListener<User>() {
                             @Override
                             public void onAdd(User user, String key) {
                                 user.onChange = new Schema.onChange() {
@@ -144,10 +144,10 @@ public class MainActivity extends AppCompatActivity {
                                 };
                             }
                         };
-                        room.getState().messages.onAddListener = new Schema.ArraySchema.onAddListener<Message>() {
+                        room.state.messages.onAdd = new Schema.ArraySchema.onAddListener<Message>() {
                             @Override
                             public void onAdd(final Message message, int key) {
-                                message.senderUser = room.getState().users.get(message.sender);
+                                message.senderUser = room.state.users.get(message.sender);
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
@@ -177,30 +177,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateTypingUI() {
-        Collection<User> users = room.getState().users.values();
-        Iterator<User> it = users.iterator();
-        List<String> typingUsers = new ArrayList<>();
-        while(it.hasNext()) {
-            User user = it.next();
-            if(!user.id.equals(clientId) && user.is_typing) {
-                typingUsers.add(user.name);
+        synchronized (room.state.users.lock) {
+            Collection<User> users = room.state.users.values();
+            Iterator<User> it = users.iterator();
+            List<String> typingUsers = new ArrayList<>();
+            while (it.hasNext()) {
+                User user = it.next();
+                if (!user.id.equals(clientId) && user.is_typing) {
+                    typingUsers.add(user.name);
+                }
             }
-        }
-        if (typingUsers.isEmpty()) {
-            typing.setText("");
-            return;
-        }
-        StringBuilder text = new StringBuilder();
-        for (int i = 0; i < typingUsers.size(); i++) {
-            if (i > 0) text.append(", ");
-            text.append(typingUsers.get(i));
-        }
-        if (typingUsers.size() == 1) {
-            text.append(" is typing...");
-            typing.setText(text.toString());
-        } else {
-            text.append(" are typing...");
-            typing.setText(text.toString());
+            if (typingUsers.isEmpty()) {
+                typing.setText("");
+                return;
+            }
+            StringBuilder text = new StringBuilder();
+            for (int i = 0; i < typingUsers.size(); i++) {
+                if (i > 0) text.append(", ");
+                text.append(typingUsers.get(i));
+            }
+            if (typingUsers.size() == 1) {
+                text.append(" is typing...");
+                typing.setText(text.toString());
+            } else {
+                text.append(" are typing...");
+                typing.setText(text.toString());
+            }
         }
     }
 
