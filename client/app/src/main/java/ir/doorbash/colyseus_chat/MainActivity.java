@@ -1,8 +1,9 @@
 package ir.doorbash.colyseus_chat;
 
 import android.content.SharedPreferences;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.util.SparseArray;
 import android.widget.TextView;
 
 import com.stfalcon.chatkit.messages.MessageInput;
@@ -10,9 +11,7 @@ import com.stfalcon.chatkit.messages.MessagesList;
 import com.stfalcon.chatkit.messages.MessagesListAdapter;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -27,7 +26,7 @@ import ir.doorbash.colyseus_chat.classes.User;
 public class MainActivity extends AppCompatActivity {
 
     // Constants
-    public static final String ENDPOINT = "ws://192.168.1.101:3333";
+    public static final String ENDPOINT = "ws://192.168.1.134:3333";
 
     // Views
     MessagesList messagesList;
@@ -39,6 +38,8 @@ public class MainActivity extends AppCompatActivity {
     Client client;
     Room<MyState> room;
     MessagesListAdapter<Message> adapter;
+    final HashMap<String, User> users = new HashMap<>();
+    final SparseArray<Message> messages = new SparseArray<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,6 +135,9 @@ public class MainActivity extends AppCompatActivity {
                         room.state.users.onAdd = new Schema.MapSchema.onAddListener<User>() {
                             @Override
                             public void onAdd(User user, String key) {
+                                synchronized (users) {
+                                    users.put(key, user);
+                                }
                                 user.onChange = new Schema.onChange() {
                                     @Override
                                     public void onChange(List<DataChange> changes) {
@@ -144,9 +148,20 @@ public class MainActivity extends AppCompatActivity {
                                 };
                             }
                         };
+                        room.state.users.onRemove = new Schema.MapSchema.onRemoveListener<User>() {
+                            @Override
+                            public void onRemove(User value, String key) {
+                                synchronized (users) {
+                                    users.remove(key);
+                                }
+                            }
+                        };
                         room.state.messages.onAdd = new Schema.ArraySchema.onAddListener<Message>() {
                             @Override
                             public void onAdd(final Message message, int key) {
+                                synchronized (messages) {
+                                    messages.put(key, message);
+                                }
                                 message.senderUser = room.state.users.get(message.sender);
                                 runOnUiThread(new Runnable() {
                                     @Override
@@ -154,6 +169,14 @@ public class MainActivity extends AppCompatActivity {
                                         adapter.addToStart(message, true);
                                     }
                                 });
+                            }
+                        };
+                        room.state.messages.onRemove = new Schema.ArraySchema.onRemoveListener<Message>() {
+                            @Override
+                            public void onRemove(Message value, int key) {
+                                synchronized (messages) {
+                                    messages.remove(key);
+                                }
                             }
                         };
                     }
@@ -177,12 +200,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateTypingUI() {
-        synchronized (room.state.users.lock) {
-            Collection<User> users = room.state.users.values();
-            Iterator<User> it = users.iterator();
+        synchronized (users) {
             List<String> typingUsers = new ArrayList<>();
-            while (it.hasNext()) {
-                User user = it.next();
+            for (User user : users.values()) {
+                if (user == null) continue;
                 if (!user.id.equals(clientId) && user.is_typing) {
                     typingUsers.add(user.name);
                 }
