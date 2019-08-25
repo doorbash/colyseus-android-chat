@@ -6,15 +6,17 @@ import { Server } from 'colyseus';
 import { ChatRoom } from "./rooms/chat"
 
 const port = 3333
-const app = express()
+const app = express();
+app.use(express.json());
 
 // Attach WebSocket Server on HTTP Server.
 const gameServer = new Server({
-  server: createServer(app)
+  server: createServer(app),
+  express: app
 });
 
 // Register PublicRoom as "chat"
-gameServer.register("chat", ChatRoom);
+gameServer.define("chat", ChatRoom);
 
 gameServer.onShutdown(function () {
   console.log(`game server is going down.`);

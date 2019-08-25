@@ -39,7 +39,7 @@ export class ChatRoom extends Room {
     maxClients = 10;
     autoDispose = false;
 
-    onInit(options) {
+    onCreate?(options: any): void {
         console.log("Room created!", options);
         this.setState(new MyState());
 
@@ -60,7 +60,7 @@ export class ChatRoom extends Room {
         this.state.messages.push(message);
     }
 
-    onLeave(client) {
+    onLeave?(client: Client, consented?: boolean): void | Promise<any>{
         console.log("onLeave(" + client.sessionId + ")");
 
         var user = this.state.users[client.id];
@@ -73,7 +73,7 @@ export class ChatRoom extends Room {
         delete this.state.users[client.id];
     }
 
-    onMessage(client, data) {
+    onMessage(client: Client, data: any): void {
         console.log("Room received message from", client.id, ":", data);
 
         if (data.op == "message") {
@@ -88,7 +88,7 @@ export class ChatRoom extends Room {
         }
     }
 
-    onDispose() {
+    onDispose?(): void | Promise<any> {
         console.log("Dispose Room");
     }
 }
