@@ -1,9 +1,10 @@
 package ir.doorbash.colyseus_chat;
 
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.util.SparseArray;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.stfalcon.chatkit.messages.MessageInput;
 import com.stfalcon.chatkit.messages.MessagesList;
@@ -11,27 +12,23 @@ import com.stfalcon.chatkit.messages.MessagesListAdapter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 import io.colyseus.Client;
 import io.colyseus.Room;
-import io.colyseus.serializer.schema.Change;
+import io.colyseus.serializer.schema.DataChange;
 import ir.doorbash.colyseus_chat.classes.Message;
 import ir.doorbash.colyseus_chat.classes.MyState;
 import ir.doorbash.colyseus_chat.classes.User;
 
 public class MainActivity extends AppCompatActivity {
 
-    // Constants
-    public static final String ENDPOINT = "ws://192.168.1.134:3333";
+    public static final String ENDPOINT = "ws://192.168.1.197:3333";
 
-    // Views
     MessagesList messagesList;
     MessageInput inputView;
     TextView typing;
 
-    // Variables
     Room<MyState> room;
     MessagesListAdapter<Message> adapter;
     final HashMap<String, User> users = new HashMap<>();
@@ -48,10 +45,7 @@ public class MainActivity extends AppCompatActivity {
 
         inputView.setInputListener(input -> {
             if (room != null) {
-                LinkedHashMap<String, Object> data = new LinkedHashMap<>();
-                data.put("op", "message");
-                data.put("message", input.toString());
-                room.send(data);
+                room.send("message", input.toString());
             }
             return true;
         });
@@ -60,20 +54,14 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onStartTyping() {
                 if (room != null) {
-                    LinkedHashMap<String, Object> data = new LinkedHashMap<>();
-                    data.put("op", "typing");
-                    data.put("status", true);
-                    room.send(data);
+                    room.send("typing", true);
                 }
             }
 
             @Override
             public void onStopTyping() {
                 if (room != null) {
-                    LinkedHashMap<String, Object> data = new LinkedHashMap<>();
-                    data.put("op", "typing");
-                    data.put("status", false);
-                    room.send(data);
+                    room.send("typing", false);
                 }
             }
         });
@@ -83,49 +71,50 @@ public class MainActivity extends AppCompatActivity {
 
     private void connectToServer() {
         Client client = new Client(ENDPOINT);
-        client.joinOrCreate("chat", MyState.class, room -> {
+        client.joinOrCreate(MyState.class,"chat", r -> {
             System.out.println("joined chat");
-            this.room = room;
+            this.room = r;
             runOnUiThread(() -> {
-                adapter = new MessagesListAdapter<>(room.getSessionId(), null);
+                adapter = new MessagesListAdapter<>(r.getSessionId(), null);
                 messagesList.setAdapter(adapter);
             });
-            room.state.users.onAdd = (user, key) -> {
+            r.getState().users.setOnAdd((user, key) -> {
                 synchronized (users) {
                     users.put(key, user);
                 }
-                user.onChange = changes -> {
-                    for (Change change : changes) {
-                        if (change.field.equals("is_typing")) {
-                            System.out.println(room.getSessionId() + " : " + change);
+                user.setOnChange(changes -> {
+                    for (DataChange change : changes) {
+                        if (change.getField().equals("is_typing")) {
+                            System.out.println(r.getSessionId() + " : " + change);
                             runOnUiThread(this::updateTypingUI);
                         }
                     }
-                };
-            };
-            room.state.users.onRemove = (value, key) -> {
+                });
+            });
+            r.getState().users.setOnRemove((value, key) -> {
                 synchronized (users) {
                     users.remove(key);
                 }
-            };
-            room.state.messages.onAdd = (message, key) -> {
+            });
+            r.getState().messages.setOnAdd((message, key) -> {
                 synchronized (messages) {
                     messages.put(key, message);
                 }
-                message.senderUser = room.state.users.get(message.sender);
+                message.senderUser = (User) r.getState().users.get(message.sender);
                 runOnUiThread(() -> adapter.addToStart(message, true));
-            };
-            room.state.messages.onRemove = (value, key) -> {
+            });
+            r.getState().messages.setOnRemove((value, key) -> {
                 synchronized (messages) {
                     messages.remove(key);
                 }
-            };
-            room.state.users.triggerAll();
-            room.state.messages.triggerAll();
+            });
+            r.getState().users.triggerAll();
+            r.getState().messages.triggerAll();
         }, Throwable::printStackTrace);
     }
 
     private void updateTypingUI() {
+        if(room == null) return;
         synchronized (users) {
             List<String> typingUsers = new ArrayList<>();
             for (User user : users.values()) {

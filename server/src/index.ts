@@ -11,8 +11,7 @@ app.use(express.json());
 
 // Attach WebSocket Server on HTTP Server.
 const gameServer = new Server({
-  server: createServer(app),
-  express: app
+  server: createServer(app)
 });
 
 // Register PublicRoom as "chat"
@@ -23,4 +22,4 @@ gameServer.onShutdown(function () {
 });
 
 gameServer.listen(port, '0.0.0.0');
-console.log(`Listening on http://localhost:${port}`);
+console.log(`Listening on http://0.0.0.0:${port}`);

@@ -46,6 +46,22 @@ export class ChatRoom extends Room {
         var user: User = new User();
         user.name = user.id = "server"
         this.state.users["server"] = user;
+
+        this.onMessage("message", (client, message) => {
+            console.log("message: from", client.id, ":", message)
+
+            var msg: Message = new Message();
+            msg.text = message;
+            msg.sender = this.state.users[client.id].name;
+            this.state.messages.push(msg);
+
+            this.state.users[client.id].is_typing = false;
+        });
+
+        this.onMessage("typing", (client, typing) => {
+            // console.log("typing: from", client.id, ":", typing)
+            this.state.users[client.id].is_typing = typing;
+        });
     }
 
     onJoin?(client: Client, options?: any, auth?: any): void | Promise<any> {
@@ -71,24 +87,5 @@ export class ChatRoom extends Room {
         this.state.messages.push(message);
 
         delete this.state.users[client.id];
-    }
-
-    onMessage(client: Client, data: any): void {
-        console.log("Room received message from", client.id, ":", data);
-
-        if (data.op == "message") {
-            var message: Message = new Message();
-            message.text = data.message;
-            message.sender = this.state.users[client.id].name;
-            this.state.messages.push(message);
-
-            this.state.users[client.id].is_typing = false;
-        } else if (data.op == "typing") {
-            this.state.users[client.id].is_typing = data.status;
-        }
-    }
-
-    onDispose?(): void | Promise<any> {
-        console.log("Dispose Room");
     }
 }

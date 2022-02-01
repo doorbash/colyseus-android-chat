@@ -1,21 +1,15 @@
 package ir.doorbash.colyseus_chat.classes;//
-// THIS FILE HAS BEEN GENERATED AUTOMATICALLY
-// DO NOT CHANGE IT MANUALLY UNLESS YOU KNOW WHAT YOU'RE DOING
-// 
-// GENERATED USING @colyseus/schema 0.4.41
-// 
 
-
+import io.colyseus.annotations.SchemaField;
 import io.colyseus.serializer.schema.Schema;
-import io.colyseus.serializer.schema.annotations.SchemaClass;
-import io.colyseus.serializer.schema.annotations.SchemaField;
+import io.colyseus.serializer.schema.types.ArraySchema;
+import io.colyseus.serializer.schema.types.MapSchema;
 
-@SchemaClass
 public class MyState extends Schema {
-	@SchemaField("0/map/ref")
-	public MapSchema<User> users = new MapSchema<>(User.class);
+    @SchemaField(type = "0/map/ref", ref = User.class)
+    public MapSchema<User> users = new MapSchema<>(User.class);
 
-	@SchemaField("1/array/ref")
-	public ArraySchema<Message> messages = new ArraySchema<>(Message.class);
+    @SchemaField(type = "1/array/ref", ref = Message.class)
+    public ArraySchema<Message> messages = new ArraySchema<>(Message.class);
 }
 
